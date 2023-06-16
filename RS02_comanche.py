@@ -1,22 +1,25 @@
-import pandas as pd
-import numpy as np
-import datetime
-import  streamlit as st
-import warnings
+import pandas as pd # manipulate data
+import numpy as np  # call func
+import datetime # handle datetime
+import  streamlit as st # DB
+import warnings # ignore warning
 warnings.filterwarnings("ignore")
 
+# layout
 st.set_page_config(
     page_title="RS02",
     layout = 'wide',
 )
 st.title("RS_02 Reservation Made Today by Date")
+
+# Upload
 uploaded_files = st.file_uploader("Choose a CSV file", type='CSV', accept_multiple_files=True)
 if uploaded_files:
     all= []
     for uploaded_file in uploaded_files:
         try:
             for uploaded_file in uploaded_files:
-                df= pd.read_csv(uploaded_file, skiprows=[0, 1, 2,3], encoding='latin-1')
+                df= pd.read_csv(uploaded_file, skiprows=[0, 1, 2,3], encoding='latin-1') # skip rows , and encoding latin (have latin name) 
                 if not df.empty:
                     all.append(df)
         except Exception as e:
@@ -25,7 +28,10 @@ if uploaded_files:
         all = pd.concat(all)
 
         def perform(R02):
-            R02= R02.rename(columns={'Book\r\nStatus': 'Book Status','Rm\r\nType':'Room Type','#Of\r\nRms':'OfRms','Pax\r\nAd/Ch':'Pax Ad/Ch','Company/Agent\r\nAgent':'Company/Agent','All Revenue\r\n':'All Revenue','BK\r\nSour.':'BK Sour.'})
+            # rename
+            R02= R02.rename(columns={'Book\r\nStatus': 'Book Status','Rm\r\nType':'Room Type'
+                                     ,'#Of\r\nRms':'OfRms','Pax\r\nAd/Ch':'Pax Ad/Ch','Company/Agent\r\nAgent':'Company/Agent'
+                                     ,'All Revenue\r\n':'All Revenue','BK\r\nSour.':'BK Sour.'})
             R02['Date'] = R02['Unnamed: 1'].str.split(': ').str[1]
             R02['Rate'] = R02['Rate'].str.replace(',', '').astype(float)
             R02_1 = R02.drop(['Unnamed: 1','Unnamed: 3','Time'], axis=1)
@@ -51,7 +57,7 @@ if uploaded_files:
             R02_31['Stay'] = R02_31.apply(lambda row: pd.date_range(row['Arrival'], row['Departure']), axis=1)
             R02_31 = R02_31.explode('Stay').reset_index(drop=True)
             return R02_31
-        
+    # pivot data
     R02_31 = perform(all)
     R02_ADR = R02_31.pivot_table(index='Stay', columns=['Company/Agent','Room Type','Rate code'], values=['Rate'])
     R02_LOS = R02_31.pivot_table(index='Stay', columns=['Company/Agent','Room Type','Rate code'], values=['Length of stay'])
@@ -60,7 +66,7 @@ if uploaded_files:
     RS02_LOS= R02_LOS.stack(level=['Company/Agent','Room Type'])
     RS02_LT= R02_Leadtime.stack(level=['Company/Agent','Room Type'])
 
-
+    # show data
     data_s = st.selectbox('Clike data',['RS02_ADR','RS02_LOS','RS02_Leadtime'])
     if data_s == 'RS02_ADR':
         st.write(RS02_ADR.to_html(), unsafe_allow_html=True)
